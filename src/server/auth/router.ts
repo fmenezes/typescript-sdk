@@ -39,7 +39,7 @@ export type AuthRouterOptions = {
 
 function mergeUrls(endpoint: string | URL, base: URL): URL {
   if (typeof endpoint === "string") {
-    endpoint = new URL(path.join(base.pathname, endpoint), base);
+    return new URL(path.join(base.pathname, endpoint), base);
   }
   return new URL(path.join(base.pathname, endpoint.pathname) + endpoint.search, base);
 }
