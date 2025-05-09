@@ -1,3 +1,4 @@
+import path from "path";
 import express, { RequestHandler } from "express";
 import { clientRegistrationHandler, ClientRegistrationHandlerOptions } from "./handlers/register.js";
 import { tokenHandler, TokenHandlerOptions } from "./handlers/token.js";
@@ -36,6 +37,13 @@ export type AuthRouterOptions = {
   tokenOptions?: Omit<TokenHandlerOptions, "provider">;
 };
 
+function mergeUrls(endpoint: string | URL, base: URL): URL {
+  if (typeof endpoint === "string") {
+    endpoint = new URL(path.join(base.pathname, endpoint), base);
+  }
+  return new URL(path.join(base.pathname, endpoint.pathname) + endpoint.search, base);
+}
+
 /**
  * Installs standard MCP authorization endpoints, including dynamic client registration and token revocation (if supported). Also advertises standard authorization server metadata, for easier discovery of supported configurations by clients.
  * 
@@ -70,18 +78,18 @@ export function mcpAuthRouter(options: AuthRouterOptions): RequestHandler {
     issuer: issuer.href,
     service_documentation: options.serviceDocumentationUrl?.href,
 
-    authorization_endpoint: new URL(authorization_endpoint, baseUrl || issuer).href,
+    authorization_endpoint: mergeUrls(authorization_endpoint, baseUrl || issuer).href,
     response_types_supported: ["code"],
     code_challenge_methods_supported: ["S256"],
 
-    token_endpoint: new URL(token_endpoint, baseUrl || issuer).href,
+    token_endpoint: mergeUrls(token_endpoint, baseUrl || issuer).href,
     token_endpoint_auth_methods_supported: ["client_secret_post"],
     grant_types_supported: ["authorization_code", "refresh_token"],
 
-    revocation_endpoint: revocation_endpoint ? new URL(revocation_endpoint, baseUrl || issuer).href : undefined,
+    revocation_endpoint: revocation_endpoint ? mergeUrls(revocation_endpoint, baseUrl || issuer).href : undefined,
     revocation_endpoint_auth_methods_supported: revocation_endpoint ? ["client_secret_post"] : undefined,
 
-    registration_endpoint: registration_endpoint ? new URL(registration_endpoint, baseUrl || issuer).href : undefined,
+    registration_endpoint: registration_endpoint ? mergeUrls(registration_endpoint, baseUrl || issuer).href : undefined,
   };
 
   const router = express.Router();
