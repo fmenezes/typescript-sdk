@@ -6,6 +6,7 @@ import { authorizationHandler, AuthorizationHandlerOptions } from "./handlers/au
 import { revocationHandler, RevocationHandlerOptions } from "./handlers/revoke.js";
 import { metadataHandler } from "./handlers/metadata.js";
 import { OAuthServerProvider } from "./provider.js";
+import { OAuthMetadata } from "../../shared/auth.js";
 
 export type AuthRouterOptions = {
   /**
@@ -35,6 +36,7 @@ export type AuthRouterOptions = {
   clientRegistrationOptions?: Omit<ClientRegistrationHandlerOptions, "clientsStore">;
   revocationOptions?: Omit<RevocationHandlerOptions, "provider">;
   tokenOptions?: Omit<TokenHandlerOptions, "provider">;
+  metadataModifier?: (metadata: OAuthMetadata) => OAuthMetadata;
 };
 
 function mergeUrls(endpoint: string | URL, base: URL): URL {
@@ -92,6 +94,8 @@ export function mcpAuthRouter(options: AuthRouterOptions): RequestHandler {
     registration_endpoint: registration_endpoint ? mergeUrls(registration_endpoint, baseUrl || issuer).href : undefined,
   };
 
+  const modifiedMetadata = (options.metadataModifier) ? options.metadataModifier(metadata) : metadata;
+
   const router = express.Router();
 
   router.use(
@@ -104,7 +108,7 @@ export function mcpAuthRouter(options: AuthRouterOptions): RequestHandler {
     tokenHandler({ provider: options.provider, ...options.tokenOptions })
   );
 
-  router.use("/.well-known/oauth-authorization-server", metadataHandler(metadata));
+  router.use("/.well-known/oauth-authorization-server", metadataHandler(modifiedMetadata));
 
   if (registration_endpoint) {
     router.use(
